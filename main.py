@@ -33,9 +33,21 @@ def inicio():
     return {"mensaje": "Bienvenido a mi API con base de datos"}
 
 @app.get("/productos")
-def ver_productos(db: Session = Depends(get_db)):
-    productos = db.query(Producto).all()
-    return {"productos": productos}
+def ver_productos(
+    categoria: str = None,
+    buscar: str = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Producto)
+    
+    if categoria:
+        query = query.filter(Producto.categoria == categoria)
+    
+    if buscar:
+        query = query.filter(Producto.nombre.contains(buscar))
+    
+    productos = query.all()
+    return {"productos": productos, "total": len(productos)}
 
 @app.get("/productos/{id}")
 def ver_producto(id: int, db: Session = Depends(get_db)):
@@ -46,7 +58,12 @@ def ver_producto(id: int, db: Session = Depends(get_db)):
 
 @app.post("/productos")
 def crear_producto(producto: ProductoSchema, db: Session = Depends(get_db)):
-    nuevo = Producto(nombre=producto.nombre, precio=producto.precio)
+    nuevo = Producto(
+        nombre=producto.nombre,
+        precio=producto.precio,
+        descripcion=producto.descripcion,
+        categoria=producto.categoria
+    )
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)

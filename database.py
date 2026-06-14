@@ -17,5 +17,8 @@ class Producto(Base):
     nombre = Column(String, index=True)
     precio = Column(Integer)
 
+    descripcion = Column(String, nullable=True)
+    categoria = Column(String, nullable=True)    
+    
 def crear_tablas():
     Base.metadata.create_all(bind=engine)
