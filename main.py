@@ -7,12 +7,20 @@ app = FastAPI()
 
 crear_tablas()
 
-class ProductoSchema(BaseModel):
-    nombre: str
-    precio: int
-    descripcion: str = None
-    categoria: str = None
+from pydantic import BaseModel, validator, Field
 
+class ProductoSchema(BaseModel):
+    nombre: str = Field(..., min_length=3, max_length=100)
+    precio: int = Field(..., gt=0)
+    descripcion: str = Field(None, max_length=300)
+    categoria: str = Field(None)
+
+    @validator('nombre')
+    def nombre_no_vacio(cls, v):
+        if not v.strip():
+            raise ValueError('El nombre no puede estar vacío')
+        return v.strip().title()
+        
 def get_db():
     db = SessionLocal()
     try:
