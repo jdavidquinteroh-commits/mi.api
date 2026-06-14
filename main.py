@@ -33,12 +33,11 @@ class Producto(BaseModel):
     nombre: str
     precio: int
 
-@app.post("/productos")
-def crear_producto(producto: Producto):
-    nuevo = {
-        "id": len(productos) + 1,
-        "nombre": producto.nombre,
-        "precio": producto.precio
-    }
-    productos.append(nuevo)
-    return {"mensaje": "Producto creado", "producto": nuevo}    
+@app.put("/productos/{id}")
+def actualizar_producto(id: int, producto: Producto):
+    for i, p in enumerate(productos):
+        if p["id"] == id:
+            productos[i]["nombre"] = producto.nombre
+            productos[i]["precio"] = producto.precio
+            return {"mensaje": "Producto actualizado", "producto": productos[i]}
+    return {"error": "Producto no encontrado"}
