@@ -1,43 +1,63 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from database import SessionLocal, Producto, crear_tablas
 
 app = FastAPI()
 
-@app.get("/")
-def inicio():
-    return {"mensaje": "Bienvenido a mi primera API"}
+crear_tablas()
 
-@app.get("/saludo/{nombre}")
-def saludar(nombre: str):
-    return {"mensaje": f"Hola {nombre}, bienvenido a FastAPI"}
-
-productos = [
-    {"id": 1, "nombre": "Asado al barril", "precio": 35000},
-    {"id": 2, "nombre": "Tacos de birria", "precio": 15000},
-    {"id": 3, "nombre": "Costillas BBQ", "precio": 28000}
-]
-
-@app.get("/productos")
-def ver_productos():
-    return {"productos": productos}
-
-@app.get("/productos/{id}")
-def ver_producto(id: int):
-    for producto in productos:
-        if producto["id"] == id:
-            return {"producto": producto}
-    return {"error": "Producto no encontrado"}    
-from fastapi import FastAPI
-from pydantic import BaseModel
-
-class Producto(BaseModel):
+class ProductoSchema(BaseModel):
     nombre: str
     precio: int
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@app.get("/")
+def inicio():
+    return {"mensaje": "Bienvenido a mi API con base de datos"}
+
+@app.get("/productos")
+def ver_productos(db: Session = Depends(get_db)):
+    productos = db.query(Producto).all()
+    return {"productos": productos}
+
+@app.get("/productos/{id}")
+def ver_producto(id: int, db: Session = Depends(get_db)):
+    producto = db.query(Producto).filter(Producto.id == id).first()
+    if not producto:
+        return {"error": "Producto no encontrado"}
+    return {"producto": producto}
+
+@app.post("/productos")
+def crear_producto(producto: ProductoSchema, db: Session = Depends(get_db)):
+    nuevo = Producto(nombre=producto.nombre, precio=producto.precio)
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return {"mensaje": "Producto creado", "producto": nuevo}
+
 @app.put("/productos/{id}")
-def actualizar_producto(id: int, producto: Producto):
-    for i, p in enumerate(productos):
-        if p["id"] == id:
-            productos[i]["nombre"] = producto.nombre
-            productos[i]["precio"] = producto.precio
-            return {"mensaje": "Producto actualizado", "producto": productos[i]}
-    return {"error": "Producto no encontrado"}
+def actualizar_producto(id: int, producto: ProductoSchema, db: Session = Depends(get_db)):
+    p = db.query(Producto).filter(Producto.id == id).first()
+    if not p:
+        return {"error": "Producto no encontrado"}
+    p.nombre = producto.nombre
+    p.precio = producto.precio
+    db.commit()
+    db.refresh(p)
+    return {"mensaje": "Producto actualizado", "producto": p}
+
+@app.delete("/productos/{id}")
+def eliminar_producto(id: int, db: Session = Depends(get_db)):
+    p = db.query(Producto).filter(Producto.id == id).first()
+    if not p:
+        return {"error": "Producto no encontrado"}
+    db.delete(p)
+    db.commit()
+    return {"mensaje": f"Producto {id} eliminado"}
