@@ -10,6 +10,8 @@ crear_tablas()
 class ProductoSchema(BaseModel):
     nombre: str
     precio: int
+    descripcion: str = None
+    categoria: str = None
 
 def get_db():
     db = SessionLocal()
