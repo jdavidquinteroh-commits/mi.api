@@ -52,19 +52,24 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
 def ver_productos(
     categoria: str = None,
     buscar: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    username: str = Depends(verificar_token)
 ):
-    query = db.query(Producto)
+    usuario = obtener_usuario(db, username)
+    query = db.query(Producto).filter(Producto.usuario_id == usuario.id)
+    
     if categoria:
         query = query.filter(Producto.categoria == categoria)
     if buscar:
         query = query.filter(Producto.nombre.contains(buscar))
+    
     productos = query.all()
     return {"productos": productos, "total": len(productos)}
 
 @app.get("/productos/{id}")
-def ver_producto(id: int, db: Session = Depends(get_db)):
-    producto = db.query(Producto).filter(Producto.id == id).first()
+def ver_producto(id: int, db: Session = Depends(get_db), username: str = Depends(verificar_token)):
+    usuario = obtener_usuario(db, username)
+    producto = db.query(Producto).filter(Producto.id == id, Producto.usuario_id == usuario.id).first()
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return {"producto": producto}
@@ -73,13 +78,15 @@ def ver_producto(id: int, db: Session = Depends(get_db)):
 def crear_producto(
     producto: ProductoSchema,
     db: Session = Depends(get_db),
-    usuario: str = Depends(verificar_token)
+    username: str = Depends(verificar_token)
 ):
+    usuario = obtener_usuario(db, username)
     nuevo = Producto(
         nombre=producto.nombre,
         precio=producto.precio,
         descripcion=producto.descripcion,
-        categoria=producto.categoria
+        categoria=producto.categoria,
+        usuario_id=usuario.id
     )
     db.add(nuevo)
     db.commit()

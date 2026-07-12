@@ -1,16 +1,5 @@
-from sqlalchemy import Column, Integer, String
-from database import Base, engine, SessionLocal
+from database import SessionLocal, Usuario
 from auth import hashear_password
-
-class Usuario(Base):
-    __tablename__ = "usuarios"
-
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    password_hash = Column(String)
-
-Base.metadata.create_all(bind=engine)
 
 def get_db():
     db = SessionLocal()
